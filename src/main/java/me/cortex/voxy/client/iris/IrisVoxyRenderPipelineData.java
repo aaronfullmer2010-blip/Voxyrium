@@ -425,6 +425,7 @@ public class IrisVoxyRenderPipelineData {
             for (var uniform : uniforms) {
                 uniformsUnseen.remove(uniform.name);
             }
+
             Logger.error("The following uniforms could not be found: [" + uniformsUnseen.stream().sorted(String::compareToIgnoreCase).collect(Collectors.joining(","))+"]");
         }
         //In _theory_ this should work?
@@ -543,7 +544,9 @@ public class IrisVoxyRenderPipelineData {
                 int sampler = ts.sampler.getAsInt();
                 if (sampler != -1) {
                     glBindSampler(unit, sampler);
-                }//TODO: might need to bind sampler 0
+                } else {
+                    glBindSampler(unit, 0);
+                }
             }
         };
         return new ImageSet(builder.toString(), bindingFunction);

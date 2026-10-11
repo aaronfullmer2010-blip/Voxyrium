@@ -1,11 +1,13 @@
 {
   "required": true,
   "package": "me.cortex.voxy.client.mixin",
+  "plugin": "me.cortex.voxy.common.MixinConfig",
   "compatibilityLevel": "JAVA_17",
   "client": [
     "flashback.MixinFlashbackMeta",
     "flashback.MixinFlashbackRecorder",
     "iris.CustomUniformsAccessor",
+    "iris.DepthTransformerAccessor",
     "iris.IrisRenderingPipelineAccessor",
     "iris.MixinIris",
     "iris.MixinIrisRenderingPipeline",

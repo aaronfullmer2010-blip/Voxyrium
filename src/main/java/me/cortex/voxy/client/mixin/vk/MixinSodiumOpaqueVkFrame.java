@@ -1,6 +1,6 @@
 package me.cortex.voxy.client.mixin.vk;
 
-import com.mojang.blaze3d.textures.GpuSampler;
+import com.mojang.renderpearl.api.textures.GpuSampler;
 import me.cortex.voxy.client.core.IVoxyRenderSystemHolder;
 import me.cortex.voxy.client.core.vk.MinecraftVkHost;
 import me.cortex.voxy.client.core.vk.MinecraftVkHostAdapter;
