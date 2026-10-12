@@ -373,16 +373,19 @@ jar {
 
 project.ext.lwjglVersion = "3.4.1"
 
-// --- Voxy Vulkan backend deps (optional at runtime; probed via capability detection) ---
+// --- Voxy Vulkan backend deps ---
+// 26.3 port: Minecraft itself ships lwjgl-vulkan and lwjgl-shaderc (3.4.3 on 26.3, with natives).
+// Bundling our own older 3.4.1 copies inside the mod jar mixes LWJGL versions at runtime and crashes
+// Minecraft's own Vulkan startup (NoSuchMethodError: Callback$Descriptor.<init>). So these are compile-only
+// against the API here and are NOT included (jar-in-jar); the game's own copies are used at runtime.
 dependencies {
-    include(implementation("org.lwjgl:lwjgl-vulkan:${project.ext.lwjglVersion}"))
-    include(implementation("org.lwjgl:lwjgl-shaderc:${project.ext.lwjglVersion}"))
+    implementation("org.lwjgl:lwjgl-vulkan:${project.ext.lwjglVersion}")
+    implementation("org.lwjgl:lwjgl-shaderc:${project.ext.lwjglVersion}")
     for (n in ["natives-windows", "natives-linux", "natives-macos", "natives-macos-arm64"]) {
-        include(runtimeOnly("org.lwjgl:lwjgl-shaderc:${project.ext.lwjglVersion}:${n}"))
+        runtimeOnly("org.lwjgl:lwjgl-shaderc:${project.ext.lwjglVersion}:${n}")
     }
-    // MoltenVK translation layer path on macOS is provided by lwjgl-vulkan natives there:
-    include(runtimeOnly("org.lwjgl:lwjgl-vulkan:${project.ext.lwjglVersion}:natives-macos"))
-    include(runtimeOnly("org.lwjgl:lwjgl-vulkan:${project.ext.lwjglVersion}:natives-macos-arm64"))
+    runtimeOnly("org.lwjgl:lwjgl-vulkan:${project.ext.lwjglVersion}:natives-macos")
+    runtimeOnly("org.lwjgl:lwjgl-vulkan:${project.ext.lwjglVersion}:natives-macos-arm64")
 }
 project.ext.lwjglNatives = "natives-windows"
 
