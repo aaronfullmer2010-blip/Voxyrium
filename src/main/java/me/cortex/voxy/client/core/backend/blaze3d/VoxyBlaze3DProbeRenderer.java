@@ -117,8 +117,8 @@ public final class VoxyBlaze3DProbeRenderer {
             .withUniform("VoxyColours", UniformType.TEXEL_BUFFER, GpuFormat.R32_UINT)
             .withUniform("VoxyCoverage", UniformType.UNIFORM_BUFFER)
             .withUniform("VoxyOcclusionOrigins", UniformType.TEXEL_BUFFER, GpuFormat.RGBA32_FLOAT)
-            .withSampler("VoxyVisibility")
-            .withSampler("VoxySodiumMask").build();
+            .withUniform("VoxyVisibility", UniformType.COMBINED_IMAGE_SAMPLER)
+            .withUniform("VoxySodiumMask", UniformType.COMBINED_IMAGE_SAMPLER).build();
     private static Blaze3dSodiumCoverage sodiumColumns = Blaze3dSodiumCoverage.empty();
     private static final Blaze3dSodiumMask sodiumMask = new Blaze3dSodiumMask();
     private static final Blaze3dSodiumVisibility sodiumVisibility = new Blaze3dSodiumVisibility();
