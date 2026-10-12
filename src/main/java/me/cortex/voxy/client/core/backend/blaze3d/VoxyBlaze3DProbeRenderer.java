@@ -1,7 +1,7 @@
 package me.cortex.voxy.client.core.backend.blaze3d;
 
-import com.mojang.renderpearl.api.IndexType;
-import com.mojang.renderpearl.api.PrimitiveTopology;
+import com.mojang.renderpearl.api.pipeline.IndexType;
+import com.mojang.renderpearl.api.pipeline.PrimitiveTopology;
 import com.mojang.renderpearl.api.GpuFormat;
 import com.mojang.renderpearl.api.buffers.GpuBuffer;
 import com.mojang.renderpearl.api.buffers.GpuBufferSlice;
@@ -10,7 +10,7 @@ import com.mojang.renderpearl.api.pipeline.ColorTargetState;
 import com.mojang.renderpearl.api.pipeline.DepthStencilState;
 import com.mojang.renderpearl.api.pipeline.RenderPipeline;
 import com.mojang.renderpearl.api.pipeline.BindGroupLayout;
-import com.mojang.renderpearl.api.shaders.UniformType;
+import com.mojang.renderpearl.api.pipeline.UniformType;
 import com.mojang.renderpearl.api.pipeline.CompareOp;
 import com.mojang.renderpearl.api.commands.CommandEncoder;
 import com.mojang.renderpearl.api.commands.RenderPass;
@@ -22,7 +22,7 @@ import com.mojang.blaze3d.vertex.BufferBuilder;
 import com.mojang.blaze3d.vertex.ByteBufferBuilder;
 import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import com.mojang.blaze3d.vertex.MeshData;
-import com.mojang.blaze3d.vertex.VertexFormat;
+import com.mojang.renderpearl.api.vertex.VertexFormat;
 import it.unimi.dsi.fastutil.longs.Long2IntOpenHashMap;
 import me.cortex.voxy.common.Logger;
 import me.cortex.voxy.common.world.WorldSection;
@@ -201,7 +201,8 @@ public final class VoxyBlaze3DProbeRenderer {
     private static RenderPipeline createTexturedMarkerPipeline() {
         return RenderPipeline.builder()
                 .withLocation(Identifier.fromNamespaceAndPath("voxy", "blaze3d_lod_probe_marker"))
-                .withBindGroupLayout(BindGroupLayouts.MATRICES_PROJECTION)
+                .withBindGroupLayout(BindGroupLayouts.DYNAMIC_TRANSFORMS)
+                .withBindGroupLayout(BindGroupLayouts.PROJECTION)
                 .withBindGroupLayout(BindGroupLayouts.SAMPLER0)
                 .withVertexShader("core/position_tex_color")
                 .withFragmentShader("core/position_tex_color")
@@ -215,7 +216,8 @@ public final class VoxyBlaze3DProbeRenderer {
     private static Blaze3dDiscardPipelines createTexturedTerrainPipeline(String name, CompareOp depthTest, boolean writeDepth, boolean translucent) {
         RenderPipeline.Builder builder = RenderPipeline.builder()
             .withLocation(Identifier.fromNamespaceAndPath("voxy", name))
-            .withBindGroupLayout(BindGroupLayouts.MATRICES_PROJECTION)
+            .withBindGroupLayout(BindGroupLayouts.DYNAMIC_TRANSFORMS)
+            .withBindGroupLayout(BindGroupLayouts.PROJECTION)
             .withBindGroupLayout(BindGroupLayouts.FOG)
             .withBindGroupLayout(BindGroupLayouts.SAMPLER0_SAMPLER2)
             .withBindGroupLayout(LOD_TABLE_LAYOUT)
@@ -235,7 +237,8 @@ public final class VoxyBlaze3DProbeRenderer {
     private static Blaze3dDiscardPipelines createCompositePipeline(String name, boolean writeDepth, boolean translucent) {
         RenderPipeline.Builder builder = RenderPipeline.builder()
                 .withLocation(Identifier.fromNamespaceAndPath("voxy", name))
-                .withBindGroupLayout(BindGroupLayouts.MATRICES_PROJECTION)
+                .withBindGroupLayout(BindGroupLayouts.DYNAMIC_TRANSFORMS)
+                .withBindGroupLayout(BindGroupLayouts.PROJECTION)
                 .withBindGroupLayout(BindGroupLayouts.SAMPLER0_SAMPLER1_SAMPLER2)
                 .withVertexShader(Identifier.fromNamespaceAndPath("voxy", "core/blaze3d_lod_composite"))
                 .withFragmentShader(Identifier.fromNamespaceAndPath("voxy", "core/blaze3d_lod_composite"))
@@ -252,7 +255,8 @@ public final class VoxyBlaze3DProbeRenderer {
     private static Blaze3dDiscardPipelines createGlobalFogPipeline() {
         return Blaze3dDiscardPipelines.build(RenderPipeline.builder()
                 .withLocation(Identifier.fromNamespaceAndPath("voxy", "blaze3d_global_fog"))
-                .withBindGroupLayout(BindGroupLayouts.MATRICES_PROJECTION)
+                .withBindGroupLayout(BindGroupLayouts.DYNAMIC_TRANSFORMS)
+                .withBindGroupLayout(BindGroupLayouts.PROJECTION)
                 .withBindGroupLayout(BindGroupLayouts.FOG)
                 .withBindGroupLayout(BindGroupLayouts.SAMPLER0_SAMPLER1)
                 .withVertexShader(Identifier.fromNamespaceAndPath("voxy", "core/blaze3d_global_fog"))
@@ -838,8 +842,8 @@ public final class VoxyBlaze3DProbeRenderer {
                 preparePass(pass, matrices, camera, null, false);
                 if (testCubeVisible && markerVertexBuffer != null) {
                     TextureAtlas blockAtlas = getBlockAtlas();
-                    pass.setPipeline(MARKER_PIPELINE);
-                    pass.bindTexture("Sampler0", blockAtlas.getTextureView(), blockAtlas.getSampler());
+                    pass.setPipeline(RenderSystem.getCompiledPipeline(MARKER_PIPELINE));
+                    pass.setUniform("Sampler0", blockAtlas.getTextureView(), blockAtlas.getSampler());
                     pass.setVertexBuffer(0, markerVertexBuffer.slice());
                     pass.draw(MARKER_VERTEX_COUNT, 1, 0, 0);
                 }
@@ -977,10 +981,10 @@ public final class VoxyBlaze3DProbeRenderer {
                         minecraftViewProjection));
                 pass.setUniform("Projection", globalFogProjectionBuffer.slice());
                 pass.setUniform("Fog", RenderSystem.getShaderFog());
-                pass.setPipeline(GLOBAL_FOG_PIPELINE.get());
-                pass.bindTexture("Sampler0", depthTarget,
+                pass.setPipeline(RenderSystem.getCompiledPipeline(GLOBAL_FOG_PIPELINE.get()));
+                pass.setUniform("Sampler0", depthTarget,
                         RenderSystem.getSamplerCache().getClampToEdge(FilterMode.NEAREST));
-                pass.bindTexture("Sampler1", lodOpaqueDepthTextureView,
+                pass.setUniform("Sampler1", lodOpaqueDepthTextureView,
                         RenderSystem.getSamplerCache().getClampToEdge(FilterMode.NEAREST));
                 pass.setVertexBuffer(0, compositeVertexBuffer.slice());
                 pass.draw(COMPOSITE_VERTEX_COUNT, 1, 0, 0);
@@ -1030,12 +1034,12 @@ public final class VoxyBlaze3DProbeRenderer {
                     new Vector4f(viewRotation.m10(), viewRotation.m11(), viewRotation.m12(), 1.0f),
                     new Vector3f(zeroToOne ? 1.0f : 0.0f, transitionStart, transitionEnd),
                     new Matrix4f(matrices.projection())));
-            pass.setPipeline((translucent ? LOD_TRANSLUCENT_COMPOSITE_PIPELINE : LOD_COMPOSITE_PIPELINE).get());
-            pass.bindTexture("Sampler0", lodColorTextureView,
+            pass.setPipeline(RenderSystem.getCompiledPipeline((translucent ? LOD_TRANSLUCENT_COMPOSITE_PIPELINE : LOD_COMPOSITE_PIPELINE).get()));
+            pass.setUniform("Sampler0", lodColorTextureView,
                     RenderSystem.getSamplerCache().getClampToEdge(FilterMode.LINEAR));
-            pass.bindTexture("Sampler1", lodDepthTextureView,
+            pass.setUniform("Sampler1", lodDepthTextureView,
                     RenderSystem.getSamplerCache().getClampToEdge(FilterMode.NEAREST));
-            pass.bindTexture("Sampler2", sodiumCoverageDepthTextureView,
+            pass.setUniform("Sampler2", sodiumCoverageDepthTextureView,
                     RenderSystem.getSamplerCache().getClampToEdge(FilterMode.NEAREST));
             pass.setVertexBuffer(0, compositeVertexBuffer.slice());
             pass.draw(COMPOSITE_VERTEX_COUNT, 1, 0, 0);
@@ -1047,12 +1051,12 @@ public final class VoxyBlaze3DProbeRenderer {
         try (RenderPass pass = encoder.createRenderPass(() -> "Voxy Sodium depth prefill", lodColorTextureView,
                 Optional.empty(), lodDepthTextureView, OptionalDouble.empty())) {
             RenderSystem.bindDefaultUniforms(pass);
-            pass.setPipeline(LOD_DEPTH_SEED_PIPELINE.get());
+            pass.setPipeline(RenderSystem.getCompiledPipeline(LOD_DEPTH_SEED_PIPELINE.get()));
             pass.setUniform("DynamicTransforms", RenderSystem.getDynamicUniforms().writeTransform(
                     new Matrix4f(matrices.projection()).invert(), new Vector4f(1),
                     new Vector3f(RenderSystem.getDevice().getDeviceInfo().isZZeroToOne() ? 1 : 0, 0, 0),
                     createLodProjection(matrices.projection())));
-            pass.bindTexture("Sampler0", sodiumCoverageDepthTextureView,
+            pass.setUniform("Sampler0", sodiumCoverageDepthTextureView,
                     RenderSystem.getSamplerCache().getClampToEdge(FilterMode.NEAREST));
             pass.setVertexBuffer(0, compositeVertexBuffer.slice());
             pass.draw(COMPOSITE_VERTEX_COUNT, 1, 0, 0);
@@ -1336,11 +1340,11 @@ public final class VoxyBlaze3DProbeRenderer {
         if (blazeModelStore == null) {
             return;
         }
-        pass.setPipeline((renderLodAboveTerrain ? LOD_OVERLAY_PIPELINE : LOD_PIPELINE).get());
+        pass.setPipeline(RenderSystem.getCompiledPipeline((renderLodAboveTerrain ? LOD_OVERLAY_PIPELINE : LOD_PIPELINE).get()));
         bindLodTables(pass);
         pass.setUniform("Fog", RenderSystem.getShaderFog());
-        pass.bindTexture("Sampler0", blazeModelStore.atlasView(), blazeModelStore.atlasSampler());
-        pass.bindTexture("Sampler2", Minecraft.getInstance().gameRenderer.levelLightmap(),
+        pass.setUniform("Sampler0", blazeModelStore.atlasView(), blazeModelStore.atlasSampler());
+        pass.setUniform("Sampler2", Minecraft.getInstance().gameRenderer.levelLightmap(),
                 RenderSystem.getSamplerCache().getClampToEdge(FilterMode.LINEAR));
         pass.setIndexBuffer(lodIndexBuffer, IndexType.INT);
         pass.setVertexBuffer(0, lodCornerBuffer.slice());
@@ -1383,11 +1387,11 @@ public final class VoxyBlaze3DProbeRenderer {
         if (blazeModelStore == null) {
             return;
         }
-        pass.setPipeline((renderLodAboveTerrain ? LOD_WATER_OVERLAY_PIPELINE : LOD_WATER_PIPELINE).get());
+        pass.setPipeline(RenderSystem.getCompiledPipeline((renderLodAboveTerrain ? LOD_WATER_OVERLAY_PIPELINE : LOD_WATER_PIPELINE).get()));
         bindLodTables(pass);
         pass.setUniform("Fog", RenderSystem.getShaderFog());
-        pass.bindTexture("Sampler0", blazeModelStore.atlasView(), blazeModelStore.atlasSampler());
-        pass.bindTexture("Sampler2", Minecraft.getInstance().gameRenderer.levelLightmap(),
+        pass.setUniform("Sampler0", blazeModelStore.atlasView(), blazeModelStore.atlasSampler());
+        pass.setUniform("Sampler2", Minecraft.getInstance().gameRenderer.levelLightmap(),
                 RenderSystem.getSamplerCache().getClampToEdge(FilterMode.LINEAR));
         pass.setIndexBuffer(lodIndexBuffer, IndexType.INT);
         pass.setVertexBuffer(0, lodCornerBuffer.slice());

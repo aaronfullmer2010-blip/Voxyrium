@@ -65,7 +65,7 @@ final class Blaze3dOcclusion implements AutoCloseable {
     boolean hasIndirect() { return this.commands != null; }
     void bind(RenderPass pass) {
         pass.setUniform("VoxyOcclusionOrigins", this.origins);
-        pass.bindTexture("VoxyVisibility", this.visibilityView,
+        pass.setUniform("VoxyVisibility", this.visibilityView,
                 RenderSystem.getSamplerCache().getClampToEdge(FilterMode.NEAREST));
     }
     void capture(CommandEncoder encoder, GpuTextureView depth, GpuBuffer fullscreen, Matrix4fc view) {
@@ -77,8 +77,8 @@ final class Blaze3dOcclusion implements AutoCloseable {
             try (RenderPass pass = encoder.createRenderPass(() -> "Voxy conservative depth reduction",
                     this.levels[level], Optional.empty())) {
                 RenderSystem.bindDefaultUniforms(pass);
-                pass.setPipeline(level == 0 ? COPY : REDUCE);
-                pass.bindTexture("Sampler0", source, RenderSystem.getSamplerCache().getClampToEdge(FilterMode.NEAREST));
+                pass.setPipeline(RenderSystem.getCompiledPipeline(level == 0 ? COPY : REDUCE));
+                pass.setUniform("Sampler0", source, RenderSystem.getSamplerCache().getClampToEdge(FilterMode.NEAREST));
                 pass.setVertexBuffer(0, fullscreen.slice());
                 pass.draw(4, 1, 0, 0);
             }
@@ -86,13 +86,13 @@ final class Blaze3dOcclusion implements AutoCloseable {
         try (RenderPass pass = encoder.createRenderPass(() -> "Voxy section visibility",
                 this.visibilityView, Optional.empty())) {
             RenderSystem.bindDefaultUniforms(pass);
-            pass.setPipeline(VISIBILITY);
+            pass.setPipeline(RenderSystem.getCompiledPipeline(VISIBILITY));
             pass.setUniform("DynamicTransforms", RenderSystem.getDynamicUniforms().writeTransform(new Matrix4f(view),
                     new Vector4f(1), new Vector3f(depth.getWidth(0), depth.getHeight(0),
                             RenderSystem.getDevice().getDeviceInfo().isZZeroToOne() ? 1 : 0), new Matrix4f()));
             pass.setUniform("VoxyOcclusionOrigins", this.origins);
             pass.setUniform("VoxyOcclusionBounds", this.bounds);
-            pass.bindTexture("Sampler0", this.hierarchyView,
+            pass.setUniform("Sampler0", this.hierarchyView,
                     RenderSystem.getSamplerCache().getClampToEdge(FilterMode.NEAREST));
             pass.setVertexBuffer(0, fullscreen.slice());
             pass.draw(4, 1, 0, 0);
@@ -102,9 +102,9 @@ final class Blaze3dOcclusion implements AutoCloseable {
             try (RenderPass pass = encoder.createRenderPass(() -> "Voxy GPU indirect command generation",
                     this.commandView, Optional.empty())) {
                 RenderSystem.bindDefaultUniforms(pass);
-                pass.setPipeline(COMMANDS);
+                pass.setPipeline(RenderSystem.getCompiledPipeline(COMMANDS));
                 pass.setUniform("VoxyOcclusionCounts", this.counts);
-                pass.bindTexture("Sampler0", this.visibilityView,
+                pass.setUniform("Sampler0", this.visibilityView,
                         RenderSystem.getSamplerCache().getClampToEdge(FilterMode.NEAREST));
                 pass.setVertexBuffer(0, fullscreen.slice());
                 pass.draw(4, 1, 0, 0);

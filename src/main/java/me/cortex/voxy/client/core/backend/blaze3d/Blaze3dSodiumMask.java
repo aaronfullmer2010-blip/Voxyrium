@@ -43,7 +43,7 @@ final class Blaze3dSodiumMask implements AutoCloseable {
     }
     void bind(RenderPass pass) {
         pass.setUniform("VoxyCoverage", this.uniform);
-        pass.bindTexture("VoxySodiumMask", this.view, RenderSystem.getSamplerCache().getClampToEdge(FilterMode.NEAREST));
+        pass.setUniform("VoxySodiumMask", this.view, RenderSystem.getSamplerCache().getClampToEdge(FilterMode.NEAREST));
     }
     @Override public void close() {
         if (this.view != null) this.view.close();
